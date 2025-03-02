@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import { nanoid } from 'nanoid';
-import { playTickingSound, stopTickingSound } from './utils/audio';
+import { playTickingSound, stopTickingSound, initAudio, beep } from './utils/audio';
 import './app.css'
 
 // Define types
@@ -24,7 +24,6 @@ const App = () => {
   // Form state for adding new timers
   const [timerQuantity, setTimerQuantity] = useState<number>(1);
   const [timerDuration, setTimerDuration] = useState<number>(20);
-  const [timerName, setTimerName] = useState<string>('Exercise');
   
   // Load timers and preferences from localStorage on initial render
   useEffect(() => {
@@ -78,11 +77,11 @@ const App = () => {
     localStorage.setItem('exerciseDarkMode', JSON.stringify(darkMode));
   }, [darkMode]);
   
-  // Toggle dark mode
-  const handleToggleDarkMode = () => {
-    console.log('Toggling dark mode from', darkMode, 'to', !darkMode);
-    setDarkMode(!darkMode);
-  };
+  // // Toggle dark mode
+  // const handleToggleDarkMode = () => {
+  //   console.log('Toggling dark mode from', darkMode, 'to', !darkMode);
+  //   setDarkMode(!darkMode);
+  // };
   
   // Add timers to the list
   const handleAddTimers = () => {
@@ -157,6 +156,28 @@ const App = () => {
     }
   };
   
+  // Initialize audio on component mount
+  useEffect(() => {
+    initAudio();
+    
+    // Add a click handler to the document to enable audio on iOS
+    const enableAudio = () => {
+      // Create and play a silent audio element to enable audio
+      const silentAudio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV');
+      silentAudio.play().catch(() => {
+        console.log('Silent audio play failed, but that\'s okay');
+      });
+      
+      document.removeEventListener('click', enableAudio);
+    };
+    
+    document.addEventListener('click', enableAudio);
+    
+    return () => {
+      document.removeEventListener('click', enableAudio);
+    };
+  }, []);
+  
   // Timer countdown effect
   useEffect(() => {
     if (!isRunning) return;
@@ -176,8 +197,17 @@ const App = () => {
       setCurrentCountdown(prev => prev - 1);
       
       // Play ticking sound in last 5 seconds
-      if (currentCountdown <= 5) {
-        playTickingSound();
+      if (currentCountdown <= 5 && currentCountdown > 0) {
+        console.log('Playing ticking sound, countdown:', currentCountdown);
+        if (isInGap) {
+          beep();
+        } else {
+          playTickingSound();
+        }
+        // As a fallback, also try the beep function
+        // if (currentCountdown <= 3) {
+        //   beep();
+        // }
       }
     }, 1000);
     
@@ -188,18 +218,18 @@ const App = () => {
   }, [isRunning, currentCountdown, isInGap, activeTimerIndex]);
   
   // Handle timer name change
-  const handleTimerNameChange = (id: string, newName: string) => {
-    setTimers(timers.map(timer => 
-      timer.id === id ? { ...timer, name: newName } : timer
-    ));
-  };
+  // const handleTimerNameChange = (id: string, newName: string) => {
+  //   setTimers(timers.map(timer => 
+  //     timer.id === id ? { ...timer, name: newName } : timer
+  //   ));
+  // };
   
-  // Handle timer duration change
-  const handleTimerDurationChange = (id: string, newDuration: number) => {
-    setTimers(timers.map(timer => 
-      timer.id === id ? { ...timer, duration: newDuration } : timer
-    ));
-  };
+  // // Handle timer duration change
+  // const handleTimerDurationChange = (id: string, newDuration: number) => {
+  //   setTimers(timers.map(timer => 
+  //     timer.id === id ? { ...timer, duration: newDuration } : timer
+  //   ));
+  // };
   
   // Handle timer deletion
   const handleDeleteTimer = (id: string) => {
